@@ -372,13 +372,13 @@ router.put('/addFriend/:user_id', auth, async (req, res) => {
 
         if (requestingUserProfile.pendingSentRequests) {
             if (requestingUserProfile.pendingSentRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
-                return res.json('Request already sent');
+                return res.json({ msg: 'Request already sent' });
             }
         }
 
         if (requestingUserProfile.pendingAcceptRequests) {
             if (requestingUserProfile.pendingAcceptRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
-                return res.json('This person has already sent you a friend request.');
+                return res.json({ msg: 'This person has already sent you a friend request.' });
             }
         }
 
@@ -388,7 +388,7 @@ router.put('/addFriend/:user_id', auth, async (req, res) => {
        await requestingUserProfile.save();
        await respondingUserProfile.save();
 
-        res.json('Friend request sent');
+        res.json({ msg: 'Friend request sent' });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
@@ -419,12 +419,18 @@ router.delete('/deleteRequest/:user_id', auth, async (req, res) => {
                 const removeIndex = requestingUserProfile.pendingSentRequests.map(item => item.id).indexOf(req.params.user_id);
                 requestingUserProfile.pendingSentRequests.splice(removeIndex, 1);
             }
+            else {
+                return res.json({ msg: 'Error' })
+            }
         }
 
         if (requestingUserProfile.pendingAcceptRequests){
             if (requestingUserProfile.pendingAcceptRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
                 const removeIndex = requestingUserProfile.pendingAcceptRequests.map(item => item.id).indexOf(req.params.user_id);
                 requestingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
+            }
+            else {
+                return res.json({ msg: 'Error' })
             }
         }
 
@@ -433,12 +439,18 @@ router.delete('/deleteRequest/:user_id', auth, async (req, res) => {
                 const removeIndex = respondingUserProfile.pendingAcceptRequests.map(item => item.id).indexOf(req.user.id);
                 respondingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
             }
+            else {
+                return res.json({ msg: 'Error' })
+            }
         }
 
         if (respondingUserProfile.pendingSentRequests){
             if (respondingUserProfile.pendingSentRequests.filter(friend => friend.user.toString() === req.user.id).length > 0){
                 const removeIndex = respondingUserProfile.pendingSentRequests.map(item => item.id).indexOf(req.user.id);
                 respondingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
+            }
+            else {
+                return res.json({ msg: 'Error' })
             }
         }
 
@@ -464,9 +476,13 @@ router.put('/acceptRequest/:user_id', auth, async (req, res) => {
             return res.json({ msg: 'This person has not yet requested to connect' });
         }
 
+        //if the same person is accepting the request who sent it in the first place
+        if(reqUser.pendingSentRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
+            return res.json({ msg: 'You cant accept the requests you sent' });
+        }
+
         if(reqUser.friends){
-            let checkIndex = reqUser.friends.map(friend => friend.user).indexOf(req.params.user_id)
-            if(checkIndex){
+            if(reqUser.friends.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
                 return res.json({msg: 'You are already friends'});
             }
         }
@@ -486,7 +502,7 @@ router.put('/acceptRequest/:user_id', auth, async (req, res) => {
         await reqUser.save();
         await resUser.save();
 
-        res.json('You are now friends');
+        res.json({ msg: 'You are now friends' });
     } catch (error) {
         console.error(error.message);
         res.status(500).json('Server Error');
@@ -502,16 +518,15 @@ router.delete('/removeFriend/:user_id', auth, async (req, res) => {
         const resUser = await Profile.findOne({ user: req.params.user_id });
 
         if(reqUser.friends){
-            let checkIndex 
-            if(reqUser.friends.filter(friend => friend.user.toString() === req.params.user_id).length = 0){
-                return res.json({ msg: 'You are not friends' });
-            }
-            else {
+            if(reqUser.friends.filter(friend => friend.id === req.params.user_id).length > 0){
                 let removeIndex = reqUser.friends.map(item => item.id).indexOf(req.params.user_id);
                 reqUser.friends.splice(removeIndex, 1);   //deleting from friends
 
                 removeIndex = resUser.friends.map(item => item.id).indexOf(req.user.id);
                 resUser.friends.splice(removeIndex, 1);   //deleting from friends
+            }
+            else {
+                return res.json({ msg: 'You are not friends' });
             }
 
         }
@@ -519,7 +534,7 @@ router.delete('/removeFriend/:user_id', auth, async (req, res) => {
         await reqUser.save();
         await resUser.save();
 
-        res.json('User removed from friend list');
+        res.json({ msg: 'User removed from friend list' });
     } catch (error) {
         console.error(error.message);
         res.status(500).send('Server Error');
