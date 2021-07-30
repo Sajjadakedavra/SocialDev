@@ -9,7 +9,7 @@ const { check, validationResult } = require('express-validator/check');
 const User = require('../../models/User');
 
 
-//@route GET api/users
+//@route POST api/users
 //@desc Register user - first param is the default route, second is the middleware, third is the callback req res
 //@access Public
 router.post('/', [

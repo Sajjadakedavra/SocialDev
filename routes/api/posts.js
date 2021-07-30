@@ -29,7 +29,7 @@ router.post('/', [
                 name: user.name,
                 avatar: user.avatar,
                 user: req.user.id,
-                private: req.body.private   //field added by me for extra feature to make posts private
+                private: req.body.privatePost   //field added by me for extra feature to make posts private
             }); 
 
             const post = await newPost.save();
@@ -51,8 +51,17 @@ router.get('/', auth, async (req, res) => {
     try {
         const reqUser = await Profile.findOne({ user: req.user.id });
         const user = req.user.id;
+        // const post = []
+
+        // if(reqUser.friends && reqUser.friends.length > 0){
+        //     reqUser.friends.forEach(async friend => {
+        //         post.push( await Post.find({ user: friend._id, private: true }) )
+        //     });
+        // }            
 
         const posts = await Post.find( { $or: [ { user: req.user.id }, { user: { $ne: req.user.id }, private: false } ] } ).sort( { date: -1 } );
+
+        // post.map(p => posts.unshift(p));
 
         res.json(posts);
     } catch (err) {
@@ -143,7 +152,7 @@ router.put('/like/:id', auth, async (req, res) => {
         if(post.private === true && req.user.id.toString() !== post.user.toString() ){
             if(reqUser.friends.length > 0){
                 reqUser.friends.filter(function(friend){
-                    if(friend.id.toString() !== post.user.toString()){
+                    if(friend._id.toString() !== post.user.toString()){
                         return res.json({ msg: 'Not authorized 1' });
                     }
                 }) 
@@ -163,7 +172,7 @@ router.put('/like/:id', auth, async (req, res) => {
 
         post.likes.unshift({ user: req.user.id });
 
-        // await post.save();
+        await post.save();
 
         res.json(post.likes);
     } catch (err) {
@@ -209,7 +218,7 @@ router.put('/unlike/:id', auth, async (req, res) => {
 //@desc Comment on a post
 //@access Private
 
-router.put('/comment/:id', 
+router.post('/comment/:id', 
     [
         auth,
         [
@@ -231,7 +240,7 @@ router.put('/comment/:id',
         if(post.private === true && req.user.id.toString() !== post.user.toString() ){
             if(reqUser.friends.length > 0){
                 reqUser.friends.filter(function(friend){
-                    if(friend.id.toString() !== post.user.toString()){
+                    if(friend._id.toString() !== post.user.toString()){
                         return res.json({ msg: 'Not authorized 1' });
                     }
                     else {

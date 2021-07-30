@@ -7,6 +7,7 @@ const { check, validationResult } = require('express-validator/check');
 
 const Profile = require('../../models/Profile');
 const User = require('../../models/User');
+const Post = require('../../models/Post');
 
 //@route GET api/profile/me
 //@desc Get current user's profile
@@ -144,6 +145,9 @@ router.get('/user/:user_id', async (req, res) => {
 
 router.delete('/', auth, async (req, res) => {
     try {
+        //Remove user posts
+        await Post.deleteMany({ user: req.user.id });
+
         //Remove profile
         await Profile.findOneAndRemove({ user: req.user.id });
 
@@ -365,10 +369,14 @@ router.put('/addFriend/:user_id', auth, async (req, res) => {
         const requestingUserProfile = await Profile.findOne({ user:req.user.id })
         
         if (respondingUserProfile.friends){
-            if(respondingUserProfile.friends.filter(friend => friend.user.toString() === req.user.id).length > 0){
+            if(respondingUserProfile.friends.filter(friend => friend._id.toString() === req.user.id).length > 0){
                 return res.json({ msg: 'You are already friends' });
             }
         }
+
+        // if (respondingUserProfile.friends){
+        //     respondingUserProfile.friends.map(friend => console.log(friend._id))
+        // }
 
         if (requestingUserProfile.pendingSentRequests) {
             if (requestingUserProfile.pendingSentRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
@@ -381,7 +389,7 @@ router.put('/addFriend/:user_id', auth, async (req, res) => {
                 return res.json({ msg: 'This person has already sent you a friend request.' });
             }
         }
-
+    
        requestingUserProfile.pendingSentRequests.unshift({ user: req.params.user_id });
        respondingUserProfile.pendingAcceptRequests.unshift({ user: req.user.id });
 
@@ -418,40 +426,44 @@ router.delete('/deleteRequest/:user_id', auth, async (req, res) => {
             if (requestingUserProfile.pendingSentRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
                 const removeIndex = requestingUserProfile.pendingSentRequests.map(item => item.id).indexOf(req.params.user_id);
                 requestingUserProfile.pendingSentRequests.splice(removeIndex, 1);
+                // console.log('done 1')
             }
-            else {
-                return res.json({ msg: 'Error' })
-            }
+            // else {
+            //     return res.json({ msg: 'Error 1' })
+            // }
         }
 
         if (requestingUserProfile.pendingAcceptRequests){
             if (requestingUserProfile.pendingAcceptRequests.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
                 const removeIndex = requestingUserProfile.pendingAcceptRequests.map(item => item.id).indexOf(req.params.user_id);
                 requestingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
+                // console.log('done 2')
             }
-            else {
-                return res.json({ msg: 'Error' })
-            }
+            // else {
+            //     return res.json({ msg: 'Error 2' })
+            // }
         }
 
         if (respondingUserProfile.pendingAcceptRequests){
             if (respondingUserProfile.pendingAcceptRequests.filter(friend => friend.user.toString() === req.user.id).length > 0){
                 const removeIndex = respondingUserProfile.pendingAcceptRequests.map(item => item.id).indexOf(req.user.id);
                 respondingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
+                // console.log('done 3')
             }
-            else {
-                return res.json({ msg: 'Error' })
-            }
+            // else {
+            //     return res.json({ msg: 'Error 3' })
+            // }
         }
 
         if (respondingUserProfile.pendingSentRequests){
             if (respondingUserProfile.pendingSentRequests.filter(friend => friend.user.toString() === req.user.id).length > 0){
                 const removeIndex = respondingUserProfile.pendingSentRequests.map(item => item.id).indexOf(req.user.id);
-                respondingUserProfile.pendingAcceptRequests.splice(removeIndex, 1);
+                respondingUserProfile.pendingSentRequests.splice(removeIndex, 1);
+                // console.log('done 4')
             }
-            else {
-                return res.json({ msg: 'Error' })
-            }
+            // else {
+            //     return res.json({ msg: 'Error 4' })
+            // }
         }
 
         await requestingUserProfile.save();
@@ -482,7 +494,7 @@ router.put('/acceptRequest/:user_id', auth, async (req, res) => {
         }
 
         if(reqUser.friends){
-            if(reqUser.friends.filter(friend => friend.user.toString() === req.params.user_id).length > 0){
+            if(reqUser.friends.filter(friend => friend._id.toString() === req.params.user_id).length > 0){
                 return res.json({msg: 'You are already friends'});
             }
         }
@@ -496,6 +508,9 @@ router.put('/acceptRequest/:user_id', auth, async (req, res) => {
                 removeIndex = resUser.pendingSentRequests.map(item => item.id).indexOf(req.user.id);
                 resUser.pendingSentRequests.splice(removeIndex, 1);   //deleting from requests
                 resUser.friends.unshift(req.user.id);    //adding friend
+            }
+            else {
+                return res.json({ msg: 'No such request found' });
             }
         }
 
